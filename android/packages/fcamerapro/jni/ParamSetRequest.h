@@ -46,6 +46,7 @@
  * to the switch-case statement, in order to define new types of
  * messages, if needed.
  */
+#define PARAM_AUTO_FOCUS_AREA		   18
 // TODO TODO TODO
 // TODO TODO TODO
 // TODO TODO TODO

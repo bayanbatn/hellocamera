@@ -311,6 +311,11 @@ JNIEXPORT void JNICALL Java_com_nvidia_fcamerapro_FCamInterface_enqueueMessageFo
 	/* [CS478]
 	 * Enqueue a new message that represents a request for global autofocus.
 	 */
+	int xy[] = new int[2];
+	xy[0] = CAPTURE_IMAGE_WIDTH / 2;
+	xy[1] = CAPTURE_IMAGE_HEIGHT / 2;
+
+	sAppData->requestQueue.produce(ParamSetRequest(PARAM_AUTO_FOCUS_AREA, xy, 2*sizeof(int)));
 	// TODO TODO TODO
 	// TODO TODO TODO
 	// TODO TODO TODO
@@ -322,6 +327,10 @@ JNIEXPORT void JNICALL Java_com_nvidia_fcamerapro_FCamInterface_enqueueMessageFo
 	/* [CS478]
 	 * Enqueue a new message that represents a request for local autofocus
 	 */
+	int xy[] = new int[2];
+	xy[0] = (int) x;
+	xy[1] = (int) y;
+	sAppData->requestQueue.produce(ParamSetRequest(PARAM_AUTO_FOCUS_AREA, xy, 2*sizeof(int)));
 	// TODO TODO TODO
 	// TODO TODO TODO
 	// TODO TODO TODO
@@ -527,6 +536,10 @@ static void *FCamAppThread(void *ptr) {
 				 * that request autofocus to be activated. Define any new
 				 * message types in ParamSetRequestion.h.
 				 */
+			case PARAM_AUTO_FOCUS_AREA:
+				autofocus.setRect(taskData[0], taskData[1]);
+				autofocus.startSweep();
+				break;
 				// TODO TODO TODO
 				// TODO TODO TODO
 				// TODO TODO TODO
@@ -583,6 +596,8 @@ static void *FCamAppThread(void *ptr) {
 	     * You should process the incoming frame for autofocus, if necessary.
 	     * Your autofocus (MyAutoFocus.h) has a function called update(...).
 	     */
+	    if(autofocus.isFocusing())
+	    	autofocus.update(frame);
 	    // TODO TODO TODO
 	    // TODO TODO TODO
 	    // TODO TODO TODO

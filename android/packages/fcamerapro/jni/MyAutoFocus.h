@@ -17,6 +17,8 @@ public:
     	   rect = r;
     	   rect.width = RECT_EDGE_LEN;
     	   rect.height = RECT_EDGE_LEN;
+    	   rect.x = -1;
+    	   rect.y = -1;
     	   /* [CS478]
     	    * Do any initialization you need.
     	    */
@@ -43,6 +45,8 @@ public:
 
     	   lens->setFocus(sweepStart);
     	   itvlCount++;
+
+    	   focusing = true;
 
     	   LOG("The near focus len: %f\n", nearFocus);
     	   LOG("The far focus len: %f\n", farFocus);
@@ -76,7 +80,9 @@ public:
     	   if (loopCount = NUM_LOOPS)
     	   {
     		   bestFocalDist = sweepStart + maxIdx * focalInc;
+    		   lens->setFocus(bestFocalDist);
     		   LOG("The best focus setting: %f\n", bestFocalDist);
+    		   focusing = false;
     		   return;
     	   }
     	   itvlCount = 0;
@@ -134,6 +140,7 @@ private:
        float nearFocus;
        float farFocus;
        float bestFocalDist;
+       bool focusing;
 };
 
 #endif
