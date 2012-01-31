@@ -22,7 +22,6 @@ public:
     	   /* [CS478]
     	    * Do any initialization you need.
     	    */
-    	   sharpVals = new float[NUM_INTERVALS];
     	   nearFocus = lens->nearFocus();
     	   farFocus = lens->farFocus();
        }
@@ -35,7 +34,7 @@ public:
     	    * already engaged?
     	    */
     	   if (!afActive) return;
-    	   bestFocalDist = -1;
+    	   bestFocalDist = -1.0f;
 
     	   sweepStart = nearFocus;
     	   sweepEnd = farFocus;
@@ -69,7 +68,8 @@ public:
     		   sharpVals[itvlCount-1] = -1;
     		   LOG("Invalid image\n");
     	   }
-    	   sharpVals[itvlCount-1] = ((farFocus - nearFocus)/2 - (sweepStart + (itvlCount - 1) * focalInc))^2;
+    	   float temp = (farFocus - nearFocus)/2 - (sweepStart + (itvlCount - 1) * focalInc);
+    	   sharpVals[itvlCount-1] = temp * temp;
 
     	   if (itvlCount != NUM_INTERVALS){
     		   lens->setFocus(sweepStart + itvlCount * focalInc);
@@ -77,7 +77,8 @@ public:
     		   return;
     	   }
     	   loopCount++;
-    	   if (loopCount = NUM_LOOPS)
+    	   int maxIdx = findMaxIdx(sharpVals);
+    	   if (loopCount == NUM_LOOPS)
     	   {
     		   bestFocalDist = sweepStart + maxIdx * focalInc;
     		   lens->setFocus(bestFocalDist);
@@ -86,16 +87,15 @@ public:
     		   return;
     	   }
     	   itvlCount = 0;
-    	   int maxIdx = findMaxIdx(sharpVals);
-    	   sweepStart = max(nearFocus, (sweepStart + (maxIdx-1) * focalInc));
-    	   sweepEnd = min(farFocus, (sweepStart + (maxIdx+1) * focalInc));
+    	   sweepStart = std::max(nearFocus, (sweepStart + (maxIdx-1) * focalInc));
+    	   sweepEnd = std::min(farFocus, (sweepStart + (maxIdx+1) * focalInc));
     	   focalInc = (sweepEnd - sweepStart) / (NUM_INTERVALS - 1);
 
        }
 
-       void getFocalDist()
+       bool isFocusing()
        {
-    	   return bestFocalDist;
+    	   return focusing;
        }
 
        void setAFActive(bool isActive)
@@ -104,7 +104,7 @@ public:
        }
 
        int findMaxIdx(float sharpVals[]){
-    	   float max = -1;
+    	   float max = -1.0f;
     	   int maxIdx = -1;
     	   for (int i = 0; i < NUM_INTERVALS; i++)
     	   {
@@ -136,7 +136,7 @@ private:
        int itvlCount;
        int loopCount;
        bool afActive;
-       float sharpVals[];
+       float sharpVals[NUM_INTERVALS];
        float nearFocus;
        float farFocus;
        float bestFocalDist;

@@ -311,7 +311,7 @@ JNIEXPORT void JNICALL Java_com_nvidia_fcamerapro_FCamInterface_enqueueMessageFo
 	/* [CS478]
 	 * Enqueue a new message that represents a request for global autofocus.
 	 */
-	int xy[] = new int[2];
+	int xy[2];
 	xy[0] = CAPTURE_IMAGE_WIDTH / 2;
 	xy[1] = CAPTURE_IMAGE_HEIGHT / 2;
 
@@ -327,7 +327,7 @@ JNIEXPORT void JNICALL Java_com_nvidia_fcamerapro_FCamInterface_enqueueMessageFo
 	/* [CS478]
 	 * Enqueue a new message that represents a request for local autofocus
 	 */
-	int xy[] = new int[2];
+	int xy[2];
 	xy[0] = (int) x;
 	xy[1] = (int) y;
 	sAppData->requestQueue.produce(ParamSetRequest(PARAM_AUTO_FOCUS_AREA, xy, 2*sizeof(int)));
