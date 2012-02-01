@@ -75,11 +75,11 @@ public:
     			   sum = row1[0] + row1[1] + row1[2] + row2[0] + row2[2] +row3[0] + row3[1] + row3[2];
     			   sum = sum >> 3;
     			   int temp = row2[1] - sum;
-    			   temp = temp < 0 ? -temp : temp;
+    			   //temp = temp < 0 ? -temp : temp;
 
     			   if (x == rect.x + 10 && (y >= rect.y + 5 && y <= rect.y + 15))
     				   LOG("MYFOCUS pixel contrast value: %d\n", temp);
-    			   totalValue += temp;
+    			   totalValue += temp * temp;
     		   }
     	   }
     	   LOG("MYFOCUS total value: %d\n", totalValue);
