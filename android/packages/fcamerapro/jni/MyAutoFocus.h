@@ -9,6 +9,8 @@
 #define NUM_INTERVALS 7
 #define NUM_LOOPS 2
 #define RECT_EDGE_LEN 20
+#define IMAGE_WIDTH 640
+#define IMAGE_HEIGHT 480
 
 class MyAutoFocus : public FCam::Tegra::AutoFocus {
 public:
@@ -126,10 +128,11 @@ public:
 
        void setRect(int x, int y, int width = RECT_EDGE_LEN, int height = RECT_EDGE_LEN)
        {
-    	   rect.x = x;
-    	   rect.y = y;
-    	   rect.height = height;
-    	   rect.width = width;
+    	   rect.x = std::max(x - RECT_EDGE_LEN / 2, 0);
+    	   rect.y = std::max(y - RECT_EDGE_LEN / 2, 0);
+    	   rect.width = std::min(width + rect.x, IMAGE_WIDTH) - rect.x;
+    	   rect.height = std::min(height + rect.y, IMAGE_HEIGHT) - rect.y;
+    	   logRectDump();
        }
 
        void logDump()
@@ -154,6 +157,16 @@ public:
     		   LOG("MYFOCUS array index: %d, val: %f\n", i, sharpVals[i]);
     	   }
     	   LOG("MYFOCUS LOG ARRAY DUMP END\n======================\n");
+       }
+
+       void logRectDump()
+       {
+    	   LOG("MYFOCUS LOG RECT DUMP BEGIN\n======================\n");
+    	   LOG("MYFOCUS rect x: %d\n", rect.x);
+    	   LOG("MYFOCUS rect y: %d\n", rect.y);
+    	   LOG("MYFOCUS rect width: %d\n", rect.width);
+    	   LOG("MYFOCUS rect height: %d\n", rect.height);
+    	   LOG("MYFOCUS LOG RECT DUMP END\n======================\n");
        }
 
 
