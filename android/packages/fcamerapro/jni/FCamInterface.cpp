@@ -423,7 +423,7 @@ static void *FCamAppThread(void *ptr) {
 	ParamSetRequest task;
 
 	for (;;) {
-		LOG("MYFOCUS inside fcam worker thread\n");
+		//LOG("MYFOCUS inside fcam worker thread\n");
 		FCAM_SHOT_PARAMS *currentShot = &tdata->currentShot;
 		FCAM_SHOT_PARAMS *previousShot = &tdata->previousShot;
 	    // Copy tasks to local queue

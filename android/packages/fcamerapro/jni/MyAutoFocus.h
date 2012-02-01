@@ -6,9 +6,9 @@
 #include <FCam/Base.h>
 #include <android/log.h>
 
-#define NUM_INTERVALS 7
+#define NUM_INTERVALS 13
 #define NUM_LOOPS 2
-#define RECT_EDGE_LEN 20
+#define RECT_EDGE_LEN 40
 #define IMAGE_WIDTH 640
 #define IMAGE_HEIGHT 480
 
@@ -54,9 +54,37 @@ public:
     	   logDump();
        }
 
-       float computeContract(FCam::Image &image)
+       typedef unsigned char uchar;
+
+       int computeImageContrast(FCam::Image &image)
        {
-    	   return -1;//computeContrast(iamge)
+    	   LOG("MYFOCUS compute contrast begin\n======================\n");
+
+    	   unsigned int sum = 0;
+    	   int totalValue = 0;
+    	   int highX = rect.x + rect.width - 1;
+    	   int highY = rect.y + rect.height - 1;
+    	   for(int x = rect.x + 1; x < highX; x++)
+    	   {
+    		   for(int y = rect.y + 1; y < highY; y++)
+    		   {
+    			   uchar* row1 = image(x-1, y-1);
+    			   uchar* row2 = image(x-1, y);
+    			   uchar* row3 = image(x-1, y+1);
+
+    			   sum = row1[0] + row1[1] + row1[2] + row2[0] + row2[2] +row3[0] + row3[1] + row3[2];
+    			   sum = sum >> 3;
+    			   int temp = row2[1] - sum;
+    			   temp = temp < 0 ? -temp : temp;
+
+    			   if (x == rect.x + 10 && (y >= rect.y + 5 && y <= rect.y + 15))
+    				   LOG("MYFOCUS pixel contrast value: %d\n", temp);
+    			   totalValue += temp;
+    		   }
+    	   }
+    	   LOG("MYFOCUS total value: %d\n", totalValue);
+    	   LOG("MYFOCUS compute contrast end\n======================\n");
+    	   return totalValue;
        }
 
        void update(const FCam::Frame &f) {
@@ -78,8 +106,8 @@ public:
     	   float actualFocus = (float) f["lens.focus"];
     	   LOG("MYFOCUS The average focus setting during the frame: %f\n", actualFocus);
 
-    	   float temp = (nearFocus - farFocus)/2 - (sweepStart + (itvlCount - 1) * dioptreInc);
-    	   sharpVals[itvlCount-1] = -temp * temp + 50;
+    	   //float temp = (nearFocus - farFocus)/2 - (sweepStart + (itvlCount - 1) * dioptreInc);
+    	   sharpVals[itvlCount-1] = computeImageContrast(image);
 
     	   if (itvlCount != NUM_INTERVALS){
     		   lens->setFocus(sweepStart + itvlCount * dioptreInc);
@@ -87,13 +115,15 @@ public:
     		   return;
     	   }
     	   loopCount++;
-    	   int maxIdx = findMaxIdx(sharpVals);
+    	   int maxIdx = findMaxIdx();
+
+    	   //Went through sufficient number of loops
     	   if (loopCount >= NUM_LOOPS)
     	   {
     		   bestFocalDist = sweepStart + maxIdx * dioptreInc;
-    		   lens->setFocus(bestFocalDist);
-    		   LOG("The best focus setting: %f\n", bestFocalDist);
+    		   LOG("MYFOCUS The best focus setting: %f\n", bestFocalDist);
     		   focusing = false;
+    		   lens->setFocus(bestFocalDist);
     		   return;
     	   }
     	   itvlCount = 0;
@@ -110,8 +140,8 @@ public:
     	   return focusing;
        }
 
-       int findMaxIdx(float sharpVals[]){
-    	   float max = -1.0f;
+       int findMaxIdx(){
+    	   int max = -1;
     	   int maxIdx = -1;
     	   for (int i = 0; i < NUM_INTERVALS; i++)
     	   {
@@ -132,7 +162,7 @@ public:
     	   rect.y = std::max(y - RECT_EDGE_LEN / 2, 0);
     	   rect.width = std::min(width + rect.x, IMAGE_WIDTH) - rect.x;
     	   rect.height = std::min(height + rect.y, IMAGE_HEIGHT) - rect.y;
-    	   logRectDump();
+    	   //logRectDump();
        }
 
        void logDump()
@@ -154,7 +184,7 @@ public:
     	   LOG("MYFOCUS LOG ARRAY DUMP BEGIN\n======================\n");
     	   for (int i = 0; i < NUM_INTERVALS; i++)
     	   {
-    		   LOG("MYFOCUS array index: %d, val: %f\n", i, sharpVals[i]);
+    		   LOG("MYFOCUS array index: %d, val: %d\n", i, sharpVals[i]);
     	   }
     	   LOG("MYFOCUS LOG ARRAY DUMP END\n======================\n");
        }
@@ -182,7 +212,7 @@ private:
        int itvlCount;
        int loopCount;
        //bool afActive;
-       float sharpVals[NUM_INTERVALS];
+       int sharpVals[NUM_INTERVALS];
        float nearFocus;
        float farFocus;
        float bestFocalDist;
