@@ -77,8 +77,6 @@ public:
     			   int temp = row2[1] - sum;
     			   //temp = temp < 0 ? -temp : temp;
 
-    			   if (x == rect.x + 10 && (y >= rect.y + 5 && y <= rect.y + 15))
-    				   LOG("MYFOCUS pixel contrast value: %d\n", temp);
     			   totalValue += temp * temp;
     		   }
     	   }
@@ -102,9 +100,18 @@ public:
     		   LOG("MYFOCUS Invalid image\n");
     	   }
 
-    	   LOG("MYFOCUS The expected focus setting: %f\n", (sweepStart + (itvlCount - 1) * dioptreInc));
+    	   float expectedFocus = sweepStart + (itvlCount - 1) * dioptreInc;
+    	   LOG("MYFOCUS The expected focus setting: %f\n", expectedFocus);
     	   float actualFocus = (float) f["lens.focus"];
     	   LOG("MYFOCUS The average focus setting during the frame: %f\n", actualFocus);
+
+    	   //If the lens focus request didn't go through, try again
+    	   if ((actualFocus > expectedFocus + 0.003f) || (actualFocus < expectedFocus - 0.003f))
+    	   {
+    		   LOG("MYFOCUS Trying lens focus request again\n");
+    		   lens->setFocus(expectedFocus);
+    		   return;
+    	   }
 
     	   //float temp = (nearFocus - farFocus)/2 - (sweepStart + (itvlCount - 1) * dioptreInc);
     	   sharpVals[itvlCount-1] = computeImageContrast(image);
