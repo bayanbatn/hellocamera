@@ -24,6 +24,8 @@ public:
     	    */
     	   nearFocus = lens->nearFocus();
     	   farFocus = lens->farFocus();
+    	   for (int i = 0; i < NUM_INTERVALS; i++)
+    		   sharpVals[i] = 0.0f;
        }
 
        void startSweep() {
@@ -33,12 +35,13 @@ public:
     	    * Before you do that, do basic checks, e.g. is the autofocus
     	    * already engaged?
     	    */
-    	   if (!afActive) return;
+    	   //if (!afActive) return;
+    	   if (focusing) return;
     	   bestFocalDist = -1.0f;
 
-    	   sweepStart = nearFocus;
-    	   sweepEnd = farFocus;
-    	   focalInc = (farFocus - nearFocus)/(NUM_INTERVALS-1);
+    	   sweepStart = farFocus;
+    	   sweepEnd = nearFocus;
+    	   dioptreInc = (nearFocus - farFocus)/(NUM_INTERVALS-1);
     	   itvlCount = 0;
     	   loopCount = 0;
 
@@ -46,9 +49,12 @@ public:
     	   itvlCount++;
 
     	   focusing = true;
+    	   logDump();
+       }
 
-    	   LOG("The near focus len: %f\n", nearFocus);
-    	   LOG("The far focus len: %f\n", farFocus);
+       float computeContract(FCam::Image &image)
+       {
+    	   return -1;//computeContrast(iamge)
        }
 
        void update(const FCam::Frame &f) {
@@ -59,48 +65,47 @@ public:
     	    * use the information to plan where to position the lens next.
     	    */
     	   /* Extract frame and do stuff */
-    	   LOG("The average focus setting during the frame: %f\n", f["lens.focus"]);
-    	   LOG("The index into the array: %d\n", itvlCount);
-    	   LOG("The expected focus setting: %f\n", (sweepStart + itvlCount * focalInc));
 
     	   FCam::Image image = f.image();
     	   if (!image.valid()){
     		   sharpVals[itvlCount-1] = -1;
-    		   LOG("Invalid image\n");
+    		   LOG("MYFOCUS Invalid image\n");
     	   }
-    	   float temp = (farFocus - nearFocus)/2 - (sweepStart + (itvlCount - 1) * focalInc);
-    	   sharpVals[itvlCount-1] = temp * temp;
+
+    	   LOG("MYFOCUS The expected focus setting: %f\n", (sweepStart + (itvlCount - 1) * dioptreInc));
+    	   float actualFocus = (float) f["lens.focus"];
+    	   LOG("MYFOCUS The average focus setting during the frame: %f\n", actualFocus);
+
+    	   float temp = (nearFocus - farFocus)/2 - (sweepStart + (itvlCount - 1) * dioptreInc);
+    	   sharpVals[itvlCount-1] = -temp * temp + 50;
 
     	   if (itvlCount != NUM_INTERVALS){
-    		   lens->setFocus(sweepStart + itvlCount * focalInc);
+    		   lens->setFocus(sweepStart + itvlCount * dioptreInc);
     		   itvlCount++;
     		   return;
     	   }
     	   loopCount++;
     	   int maxIdx = findMaxIdx(sharpVals);
-    	   if (loopCount == NUM_LOOPS)
+    	   if (loopCount >= NUM_LOOPS)
     	   {
-    		   bestFocalDist = sweepStart + maxIdx * focalInc;
+    		   bestFocalDist = sweepStart + maxIdx * dioptreInc;
     		   lens->setFocus(bestFocalDist);
     		   LOG("The best focus setting: %f\n", bestFocalDist);
     		   focusing = false;
     		   return;
     	   }
     	   itvlCount = 0;
-    	   sweepStart = std::max(nearFocus, (sweepStart + (maxIdx-1) * focalInc));
-    	   sweepEnd = std::min(farFocus, (sweepStart + (maxIdx+1) * focalInc));
-    	   focalInc = (sweepEnd - sweepStart) / (NUM_INTERVALS - 1);
-
+    	   sweepEnd = std::min(nearFocus, (sweepStart + (maxIdx+1) * dioptreInc));
+    	   sweepStart = std::max(farFocus, (sweepStart + (maxIdx-1) * dioptreInc));
+    	   dioptreInc = (sweepEnd - sweepStart) / (NUM_INTERVALS - 1);
+    	   lens->setFocus(sweepStart);
+    	   itvlCount++;
+    	   logDump();
        }
 
        bool isFocusing()
        {
     	   return focusing;
-       }
-
-       void setAFActive(bool isActive)
-       {
-    	   afActive = isActive;
        }
 
        int findMaxIdx(float sharpVals[]){
@@ -114,13 +119,41 @@ public:
     			   maxIdx = i;
     		   }
     	   }
+    	   logArrayDump();
+    	   LOG("MYFOCUS max idx : %d\n", maxIdx);
     	   return maxIdx;
        }
 
-       void setRect(int x, int y)
+       void setRect(int x, int y, int width = RECT_EDGE_LEN, int height = RECT_EDGE_LEN)
        {
     	   rect.x = x;
     	   rect.y = y;
+    	   rect.height = height;
+    	   rect.width = width;
+       }
+
+       void logDump()
+       {
+    	   LOG("MYFOCUS LOG DUMP BEGIN\n======================\n");
+    	   LOG("MYFOCUS sweep start: %f\n", sweepStart);
+    	   LOG("MYFOCUS sweep end: %f\n", sweepEnd);
+    	   LOG("MYFOCUS The near focus len: %f\n", nearFocus);
+    	   LOG("MYFOCUS The far focus len: %f\n", farFocus);
+    	   LOG("MYFOCUS Focal inc: %f\n", dioptreInc);
+    	   LOG("MYFOCUS interval count: %d\n", itvlCount);
+    	   LOG("MYFOCUS loop count: %d\n", loopCount);
+    	   LOG("MYFOCUS Focusing?: %d\n", focusing);
+    	   LOG("MYFOCUS LOG DUMP END\n======================\n");
+       }
+
+       void logArrayDump()
+       {
+    	   LOG("MYFOCUS LOG ARRAY DUMP BEGIN\n======================\n");
+    	   for (int i = 0; i < NUM_INTERVALS; i++)
+    	   {
+    		   LOG("MYFOCUS array index: %d, val: %f\n", i, sharpVals[i]);
+    	   }
+    	   LOG("MYFOCUS LOG ARRAY DUMP END\n======================\n");
        }
 
 
@@ -130,12 +163,12 @@ private:
        /* [CS478]
         * Declare any state variables you might need here.
         */
-       float sweepStart;
+       float sweepStart;//farFocus - low range of dioptres
        float sweepEnd;
-       float focalInc;
+       float dioptreInc;
        int itvlCount;
        int loopCount;
-       bool afActive;
+       //bool afActive;
        float sharpVals[NUM_INTERVALS];
        float nearFocus;
        float farFocus;

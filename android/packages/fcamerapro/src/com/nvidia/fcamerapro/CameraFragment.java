@@ -342,9 +342,18 @@ public final class CameraFragment extends Fragment implements OnClickListener, O
 			 *  Lastly, look up the Android documentation on MotionEvent
 			 *  to figure out how to retrieve the touch coordinates.
 			 */
-			//enqueueMessageForAutofocus();
+			//
 			FCamInterface iface = FCamInterface.GetInstance();
-			iface.enqueueMessageForAutofocusSpot(event.getX(), event.getY());
+			switch(mTouchActionSpinner.getSelectedItemPosition()){
+			case 0: 
+				iface.enqueueMessageForAutofocus();
+				break;
+			case 1:
+				float y = event.getY() / mCameraView.getHeight();
+				float x = event.getX() / mCameraView.getWidth();
+				iface.enqueueMessageForAutofocusSpot(x, y);//TODO
+				break;
+			}
 			// TODO TODO TODO
 			// TODO TODO TODO
 			// TODO TODO TODO

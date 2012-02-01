@@ -311,11 +311,9 @@ JNIEXPORT void JNICALL Java_com_nvidia_fcamerapro_FCamInterface_enqueueMessageFo
 	/* [CS478]
 	 * Enqueue a new message that represents a request for global autofocus.
 	 */
-	int xy[2];
-	xy[0] = CAPTURE_IMAGE_WIDTH / 2;
-	xy[1] = CAPTURE_IMAGE_HEIGHT / 2;
-
-	sAppData->requestQueue.produce(ParamSetRequest(PARAM_AUTO_FOCUS_AREA, xy, 2*sizeof(int)));
+	int value;
+	LOG("MYFOCUS global focus request\n");
+	sAppData->requestQueue.produce(ParamSetRequest(PARAM_AUTO_FOCUS_GLOBAL, &value, 0));
 	// TODO TODO TODO
 	// TODO TODO TODO
 	// TODO TODO TODO
@@ -328,9 +326,11 @@ JNIEXPORT void JNICALL Java_com_nvidia_fcamerapro_FCamInterface_enqueueMessageFo
 	 * Enqueue a new message that represents a request for local autofocus
 	 */
 	int xy[2];
-	xy[0] = (int) x;
-	xy[1] = (int) y;
-	sAppData->requestQueue.produce(ParamSetRequest(PARAM_AUTO_FOCUS_AREA, xy, 2*sizeof(int)));
+	xy[0] = (int) (x * PREVIEW_IMAGE_WIDTH);
+	xy[1] = (int) (y * PREVIEW_IMAGE_HEIGHT);
+	LOG("MYFOCUS local touch position x: %d\n", xy[0]);
+	LOG("MYFOCUS localtouch position y: %d\n", xy[1]);
+	sAppData->requestQueue.produce(ParamSetRequest(PARAM_AUTO_FOCUS_LOCAL_REG, xy, 2*sizeof(int)));
 	// TODO TODO TODO
 	// TODO TODO TODO
 	// TODO TODO TODO
@@ -417,11 +417,13 @@ static void *FCamAppThread(void *ptr) {
     double fpsUpdateTime = timer.get();
     int frameCount = 0;
 
+    LOG("MYFOCUS outside for loop\n");
     // Local task queue that processes messages from the Android application.
     std::queue<ParamSetRequest> taskQueue;
 	ParamSetRequest task;
 
 	for (;;) {
+		LOG("MYFOCUS inside fcam worker thread\n");
 		FCAM_SHOT_PARAMS *currentShot = &tdata->currentShot;
 		FCAM_SHOT_PARAMS *previousShot = &tdata->previousShot;
 	    // Copy tasks to local queue
@@ -429,6 +431,7 @@ static void *FCamAppThread(void *ptr) {
 
 	    // Parse all tasks from the Android applications.
 	    while (!taskQueue.empty()) {
+	    	LOG("MYFOCUS inside fcam worker thread, inner while loop\n");
 	    	task = taskQueue.front(); taskQueue.pop();
 
 			bool prevValue;
@@ -536,8 +539,14 @@ static void *FCamAppThread(void *ptr) {
 				 * that request autofocus to be activated. Define any new
 				 * message types in ParamSetRequestion.h.
 				 */
-			case PARAM_AUTO_FOCUS_AREA:
+			case PARAM_AUTO_FOCUS_LOCAL_REG:
+				//LOG("MYFOCUS local focus switch\n");
 				autofocus.setRect(taskData[0], taskData[1]);
+				autofocus.startSweep();
+				break;
+			case PARAM_AUTO_FOCUS_GLOBAL:
+				LOG("MYFOCUS global focus switch\n");
+				autofocus.setRect(0, 0, PREVIEW_IMAGE_WIDTH, PREVIEW_IMAGE_HEIGHT);
 				autofocus.startSweep();
 				break;
 				// TODO TODO TODO
@@ -596,8 +605,17 @@ static void *FCamAppThread(void *ptr) {
 	     * You should process the incoming frame for autofocus, if necessary.
 	     * Your autofocus (MyAutoFocus.h) has a function called update(...).
 	     */
+	    //LOG("MYFOCUS focusing check called: %d\n", autofocus.isFocusing());
 	    if(autofocus.isFocusing())
+	    {
 	    	autofocus.update(frame);
+	    	//LOG("MYFOCUS update called\n");
+	    }
+	    if(currentShot->preview.autoFocus)
+	    {
+	    	currentShot->preview.evaluated.focus = (float) frame["lens.focus"];
+	    }
+	    sleep(0.4);
 	    // TODO TODO TODO
 	    // TODO TODO TODO
 	    // TODO TODO TODO
